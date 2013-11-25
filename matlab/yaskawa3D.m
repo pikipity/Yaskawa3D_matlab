@@ -1241,13 +1241,13 @@ DL = uicontrol(DL_p,'String','Draw line','callback',@DL_button,...
                 draw_figure(point,v,'n');
             else
                 M=draw_figure(point,v,'y',M);
+                for i=1:length(M)-1
+                    M(i)=M(i)+1;
+                end
+                movie2avi(M,'demo_2_circle','fps',30);
             end
             %finish draw circle
             msgbox('Job has been finished.','Job Finish');
-            for i=1:length(M)-1
-                M(i)=M(i)+1;
-            end
-            movie2avi(M,'demo_2_circle','fps',30);
             gohome();
         end
     end
