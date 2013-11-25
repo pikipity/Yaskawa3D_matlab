@@ -475,12 +475,24 @@ DL = uicontrol(DL_p,'String','Draw line','callback',@DL_button,...
         end
     end
     function DL_button(h,dummy)
-        draw_line();
+        %clear all trail
+        clear_trail();
+        %draw line
+        job_finish=draw_line();
+        %if finished, show result
+        if(job_finish)
+            msgbox('Job has been finished','Job finish');
+        end
+        gohome();
     end
 
 %from "start_point", "stop_point" and "run_time" to get data to control 
 %robot draw a line
-    function draw_line()
+    function [job_finish,varargout]=draw_line(varargin)
+        job_finish=0;
+        if(nargin~=0)
+            video=varargin{2};
+        end
         if(~isreal(start_point(1)) || ~isreal(start_point(2)) || ~isreal(start_point(3)) ||...
                 ~isreal(stop_point(1)) || ~isreal(stop_point(2)) || ~isreal(stop_point(3)) ||...
                 ~isreal(run_time))
@@ -567,20 +579,22 @@ DL = uicontrol(DL_p,'String','Draw line','callback',@DL_button,...
                     [tout,station,theta_step]=sim('cal_theta_step',sim_time_span);
                     theta_step=theta_step';
                     %draw robot
-                    draw_robo(theta_step(1,end),theta_step(2,end),theta_step(3,end),theta_step(4,end),theta_step(5,end),theta_step(6,end),theta_step,'y','y');
-                    %goback position
-                    draw_robo(theta_orign_temp.t1,theta_orign_temp.t2,theta_orign_temp.t3,theta_orign_temp.t4,theta_orign_temp.t5,theta_orign_temp.t6,20,'n','y');
-                    msgbox('Job has been finished','Job finish');
+                    if(nargin==0)
+                        draw_robo(theta_step(1,end),theta_step(2,end),theta_step(3,end),theta_step(4,end),theta_step(5,end),theta_step(6,end),theta_step,'y','y');
+                    else
+                        video=draw_robo(theta_step(1,end),theta_step(2,end),theta_step(3,end),theta_step(4,end),theta_step(5,end),theta_step(6,end),theta_step,'y','y','y',video);
+                    end
+                    %finish draw line
+                    job_finish=1;
                 else
                     msgbox({'Robot cannot get this stop point.' ; 'Every thing will go to default value'},'Warning');
-                    goback_value();
-                    gohome();
                 end
             else
                 msgbox({'Robot cannot get this start point.'; 'Every thing will go to default value'},'Warning');
-                goback_value();
-                gohome();
             end
+        end
+        if(nargin~=0)
+            varargout{1}=video;
         end
     end
 
@@ -784,9 +798,15 @@ DL = uicontrol(DL_p,'String','Draw line','callback',@DL_button,...
     end
 
 %draw robot
-    function draw_robo(t1,t2,t3,t4,t5,t6,step,draw_trial,change_slide)
+    function [varargout]=draw_robo(t1,t2,t3,t4,t5,t6,step,draw_trial,change_slide,varargin)
         if nargin==8
             change_slide='n';
+            video='n';
+        elseif nargin==9
+            video='n';
+        else
+            video=varargin{1};
+            M=varargin{2};
         end
         %get old theta
         theta=getappdata(0,'theta_data');
@@ -814,7 +834,7 @@ DL = uicontrol(DL_p,'String','Draw line','callback',@DL_button,...
         %get component 
         robo_part=getappdata(0,'robo');
         for i=2:step
-            [base,J1,J2,J3,J4,J5,trial]=Kin(t1_step(i),t2_step(i),t3_step(i),t4_step(i),t5_step(i),t6_step(i),draw_trial);
+            [base,J1,J2,J3,J4,J5,trial,temp_trial]=Kin(t1_step(i),t2_step(i),t3_step(i),t4_step(i),t5_step(i),t6_step(i),draw_trial);
             set(robo_part(1),'vertices',base.V);
             set(robo_part(2),'vertices',J1.V);
             set(robo_part(3),'vertices',J2.V);
@@ -837,7 +857,23 @@ DL = uicontrol(DL_p,'String','Draw line','callback',@DL_button,...
                 else
                     trial_z=trial.z;
                 end
+                if isempty(temp_trial.x)
+                    temp_trial_x=0;
+                else
+                    temp_trial_x=temp_trial.x;
+                end
+                if isempty(temp_trial.y)
+                    temp_trial_y=0;
+                else
+                    temp_trial_y=temp_trial.y;
+                end
+                if isempty(temp_trial.z)
+                    temp_trial_z=0;
+                else
+                    temp_trial_z=temp_trial.z;
+                end
                 set(robo_part(7),'xdata',trial_x,'ydata',trial_y,'zdata',trial_z);
+                set(robo_part(8),'xdata',temp_trial_x,'ydata',temp_trial_y,'zdata',temp_trial_z);
             end
             %change slide
             if change_slide=='y'
@@ -884,7 +920,12 @@ DL = uicontrol(DL_p,'String','Draw line','callback',@DL_button,...
                     set(t6_slider,'Value',t6_step(i)*180/pi);
                 end
             end
-            drawnow
+            if(video=='y')
+                M(end+1)=getframe(fig_1);
+                varargout{1}=M;
+            else
+                 drawnow
+            end
         end
         theta.t1=t1;
         theta.t2=t2;
@@ -902,7 +943,7 @@ DL = uicontrol(DL_p,'String','Draw line','callback',@DL_button,...
         dim = get(0,'ScreenSize');
         fig_1 = figure('doublebuffer','on','Position',[0,35,dim(3)-200,dim(4)-110],...
             'MenuBar','none','Name','3D Yaskama Robot Graphical Demo',...
-            'NumberTitle','off','CloseRequestFcn',@del_app);
+            'NumberTitle','off','CloseRequestFcn',@del_app,'nextplot','replace');
         hold on;
         light                               % add a default light
         daspect([1 1 1])                    % Setting the aspect ratio
@@ -928,7 +969,7 @@ DL = uicontrol(DL_p,'String','Draw line','callback',@DL_button,...
         %get theta data
         theta=getappdata(0,'theta_data');
         %calculate the position of all components
-        [base,J1,J2,J3,J4,J5,trial]=Kin(theta.t1,theta.t2,theta.t3,theta.t4,theta.t5,theta.t6,'n');
+        [base,J1,J2,J3,J4,J5,trial,temp_trial]=Kin(theta.t1,theta.t2,theta.t3,theta.t4,theta.t5,theta.t6,'n');
         %plot all component
         base_plot=patch('faces',base.F,'vertices',base.V, 'facec', [0.306,0.733,1], 'EdgeColor','none');
         J1_plot=patch('faces',J1.F,'vertices',J1.V, 'facec', [0.717,0.116,0.123], 'EdgeColor','none');
@@ -937,8 +978,9 @@ DL = uicontrol(DL_p,'String','Draw line','callback',@DL_button,...
         J4_plot=patch('faces',J4.F,'vertices',J4.V, 'facec', [1,0.542,0.493], 'EdgeColor','none');
         J5_plot=patch('faces',J5.F,'vertices',J5.V, 'facec', [0.216,1,.583], 'EdgeColor','none');
         trial_plot=plot3(0,0,0);
+        temp_trial_plot=plot3(0,0,0);
         %save all plot component to "robo"
-        setappdata(0,'robo',[base_plot,J1_plot,J2_plot,J3_plot,J4_plot,J5_plot,trial_plot]);
+        setappdata(0,'robo',[base_plot,J1_plot,J2_plot,J3_plot,J4_plot,J5_plot,trial_plot,temp_trial_plot]);
     end
 %load robot data
     function loaddata
@@ -951,12 +993,14 @@ DL = uicontrol(DL_p,'String','Draw line','callback',@DL_button,...
         J5=load('J5.mat');
         %generate trial
         trial=struct('x',[],'y',[],'z',[]);
+        temp_trial=struct('x',[],'y',[],'z',[]);
         %generate theta
         theta=struct('t1',0,'t2',pi/2,'t3',-pi/2,'t4',0,'t5',-pi/2,'t6',0);
         %save all data to "patch_data" for app
         setappdata(0,'patch_data',[base,J1,J2,J3,J4,J5]);
         %save trial data
         setappdata(0,'trial_data',trial);
+        setappdata(0,'temp_trial_data',temp_trial);
         %save theta data
         setappdata(0,'theta_data',theta);
     end
@@ -966,13 +1010,14 @@ DL = uicontrol(DL_p,'String','Draw line','callback',@DL_button,...
         rmappdata(0,'patch_data');
         rmappdata(0,'robo');
         rmappdata(0,'trial_data');
+        rmappdata(0,'temp_trial_data');
         rmappdata(0,'theta_data');
         evalin('base','clear Vx;clear Vy;clear Vz;clear start_theta;');
         delete(fig_1);
     end
 %Kinermacit
 %draw_trial: 'y' or 'n'
-    function [base,J1,J2,J3,J4,J5,trial]=Kin(t1,t2,t3,t4,t5,t6,draw_trial)
+    function [base,J1,J2,J3,J4,J5,trial,temp_trial]=Kin(t1,t2,t3,t4,t5,t6,draw_trial)
         %get data from "patch_data"
         handle=getappdata(0,'patch_data');
         base=handle(1);
@@ -982,6 +1027,7 @@ DL = uicontrol(DL_p,'String','Draw line','callback',@DL_button,...
         J4=handle(5);
         J5=handle(6);
         trial=getappdata(0,'trial_data');
+        temp_trial=getappdata(0,'temp_trial_data');
         %build transfer matrix according to themselves system
         T01=[cos(t1) -sin(t1) 0 0
                   sin(t1) cos(t1) 0 0
@@ -1047,31 +1093,188 @@ DL = uicontrol(DL_p,'String','Draw line','callback',@DL_button,...
            trial.y=[trial.y T06(2,4)];
            trial.z=[trial.z T06(3,4)];
            setappdata(0,'trial_data',trial);
+           setappdata(0,'temp_trial_data',temp_trial);
        end
     end
 
 %clear trial button
     function clear_button(h,dummy)
+        clear_trail();
+    end
+
+%clear_trail function
+    function clear_trail()
         %clear trial matrix
         trial=getappdata(0,'trial_data');
         trial.x=[];
         trial.y=[];
         trial.z=[];
         setappdata(0,'trial_data',trial);
+        trial=getappdata(0,'temp_trial_data');
+        trial.x=[];
+        trial.y=[];
+        trial.z=[];
+        setappdata(0,'temp_trial_data',trial);
         %draw 0 trial
         robo_part=getappdata(0,'robo');
         set(robo_part(7),'xdata',0,'ydata',0,'zdata',0);
+        set(robo_part(8),'xdata',0,'ydata',0,'zdata',0);
         drawnow
     end
 
 %demo 1
     function demo_1_button(h,dummy)
-        msgbox('This function has not been finished.')
+        run_or_not=questdlg({'In this demo, robot will draw a "UM"';...
+            'This process will take a very long time';...
+            'Do you want it to continue?'},'Continue?','Yes','No','Cancel','Yes');
+        if (isempty(run_or_not) || strcmp(run_or_not,'Cancel') || strcmp(run_or_not,'No'))
+            run_or_not=0;
+        else
+            run_or_not=1;
+        end
+        if run_or_not==0
+            msgbox('This demo has been stopped.','Demo Cancel')
+        else
+%             video_or_not=questdlg({'Do you want to recorde a video for this demo?'},'Video?',...
+%                 'Yes','No','Cancel','Yes');
+            video_or_not='No';
+            if(strcmp(video_or_not,'Yes'))
+                video=avifile('Demo_1_UM_Yaskawa3D.avi','fps',10);
+            end
+            %clear previous trail
+            clear_trail();
+            %draw "U"
+            v=10;
+            y_temp=linspace(-1800,-1000,100);
+            x_temp=sqrt(400^2-(y_temp+1400).^2)+1000;
+            z_temp=ones(1,length(y_temp)).*300;
+            point_temp=[x_temp' y_temp' z_temp'];
+            point=[500 -1800 300
+                        1000 -1800 300];
+            if(strcmp(video_or_not,'No') || strcmp(video_or_not,'Cancel') || isempty(video_or_not))
+                draw_figure(point,v,'n');
+            else
+                video=draw_figure(point,v,'y',video);
+            end
+            v=3;
+            point=point_temp(2:end-1,:);
+            if(strcmp(video_or_not,'No') || strcmp(video_or_not,'Cancel') || isempty(video_or_not))
+                draw_figure(point,v,'n');
+            else
+                video=draw_figure(point,v,'y',video);
+            end
+            v=10;
+            point=[1000 -1000 300
+                        500 -1000 300];
+            if(strcmp(video_or_not,'No') || strcmp(video_or_not,'Cancel') || isempty(video_or_not))
+                draw_figure(point,v,'n');
+            else
+                video=draw_figure(point,v,'y',video);
+            end
+            %save "U"
+            trial=getappdata(0,'trial_data');
+            temp_trial=struct('x',trial.x,'y',trial.y,'z',trial.z);
+            setappdata(0,'temp_trial_data',temp_trial);
+            %clear trail
+            trial.x=[];
+            trial.y=[];
+            trial.z=[];
+            setappdata(0,'trial_data',trial);
+            %draw M
+            point=[1400 -800 300
+                        500 -600 300
+                        1000 -400 300
+                        500 -200 300
+                        1400 0 300];
+            if(strcmp(video_or_not,'No') || strcmp(video_or_not,'Cancel') || isempty(video_or_not))
+                draw_figure(point,v,'n');
+            else
+                video=draw_figure(point,v,'y',video);
+                video=close(video);
+            end
+            %finish draw "UM"
+            msgbox('Job has been finished.','Job Finish');
+            gohome();
+        end
     end
 
 %demo 2
     function demo_2_button(h,dummy)
-        msgbox('This function has not been finished.')
+        run_or_not=questdlg({'In this demo, robot will draw a circle';...
+            'This process will take a very long time';...
+            'Do you want it to continue?'},'Continue?','Yes','No','Cancel','Yes');
+        if (isempty(run_or_not) || strcmp(run_or_not,'Cancel') || strcmp(run_or_not,'No'))
+            run_or_not=0;
+        else
+            run_or_not=1;
+        end
+        if run_or_not==0
+            msgbox('This demo has been stopped.','Demo Cancel')
+        else
+%             video_or_not=questdlg({'Do you want to recorde a video for this demo?'},'Video?',...
+%                 'Yes','No','Cancel','Yes');
+            video_or_not='No';
+            if(strcmp(video_or_not,'Yes'))
+                M=struct('cdata',[],'colormap',[]);
+            end
+            %clear previous trail
+            clear_trail();
+            %draw circle
+            v=3;
+            y_temp=linspace(1200,800,10);
+            x_temp=sqrt(200^2-(y_temp-1000).^2)+1000;
+            z_temp=ones(1,length(y_temp)).*300;
+            point_temp=[x_temp' y_temp' z_temp'];
+            point=point_temp(1:end-1,:);
+            if(strcmp(video_or_not,'No') || strcmp(video_or_not,'Cancel') || isempty(video_or_not))
+                draw_figure(point,v,'n');
+            else
+                M=draw_figure(point,v,'y',M);
+            end
+            v=3;
+            y_temp=linspace(800,1200,10);
+            x_temp=-sqrt(200^2-(y_temp-1000).^2)+1000;
+            z_temp=ones(1,length(y_temp)).*300;
+            point_temp=[x_temp' y_temp' z_temp'];
+            point=point_temp(2:end,:);
+            if(strcmp(video_or_not,'No') || strcmp(video_or_not,'Cancel') || isempty(video_or_not))
+                draw_figure(point,v,'n');
+            else
+                M=draw_figure(point,v,'y',M);
+            end
+            %finish draw circle
+            msgbox('Job has been finished.','Job Finish');
+            for i=1:length(M)-1
+                M(i)=M(i)+1;
+            end
+            movie2avi(M,'demo_2_circle','fps',30);
+            gohome();
+        end
+    end
+
+%draw figure
+%v: mm/frame for video
+    function video_get=draw_figure(point,v,video,varargin)
+        delt_x=(point(2:end,:)-point(1:end-1,:));
+        delt_x=sqrt(delt_x(:,1).^2+delt_x(:,2).^2+delt_x(:,3).^2);
+        time=delt_x./v;
+        for i=1:length(time)
+            start_point=point(i,:);
+            stop_point=point(i+1,:);
+            run_time=time(i);
+            set(x_start_edit_IK,'String',start_point(1));
+            set(y_start_edit_IK,'String',start_point(2));
+            set(z_start_edit_IK,'String',start_point(3));
+            set(x_final_edit_IK,'String',stop_point(1));
+            set(y_final_edit_IK,'String',stop_point(2));
+            set(z_final_edit_IK,'String',stop_point(3));
+            set(run_time_edit_IK,'String',run_time);
+            if(video=='n')
+                draw_line();
+            else
+                [~,video_get]=draw_line('y',varargin{1});
+            end
+        end
     end
 
 
