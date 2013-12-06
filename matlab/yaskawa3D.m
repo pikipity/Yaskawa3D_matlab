@@ -492,6 +492,7 @@ DL = uicontrol(DL_p,'String','Draw line','callback',@DL_button,...
         job_finish=0;
         if(nargin~=0)
             video=varargin{2};
+            video_or_not=varargin{1};
         end
         if(~isreal(start_point(1)) || ~isreal(start_point(2)) || ~isreal(start_point(3)) ||...
                 ~isreal(stop_point(1)) || ~isreal(stop_point(2)) || ~isreal(stop_point(3)) ||...
@@ -562,27 +563,55 @@ DL = uicontrol(DL_p,'String','Draw line','callback',@DL_button,...
                     %stop point is OK
                     %store stop theta
                     stop_theta=[t1;t2;t3;t4;t5;t6];
-                    %Vx
-                    Vx=(stop_point(1)-start_point(1))/run_time;
-                    %Vy
-                    Vy=(stop_point(2)-start_point(2))/run_time;
-                    %Vz
-                    Vz=(stop_point(3)-start_point(3))/run_time;
-                    %calculate step theta
-                    %store necceray data to base workspace
-                    assignin('base','Vx',Vx);
-                    assignin('base','Vy',Vy);
-                    assignin('base','Vz',Vz);
-                    assignin('base','start_theta',start_theta);
-                    %use simulink to get step theta
-                    sim_time_span=0:run_time;
-                    [tout,station,theta_step]=sim('cal_theta_step',sim_time_span);
+                    if(~isequal(stop_point,start_point))
+                        %Vx
+                        Vx=(stop_point(1)-start_point(1))/run_time;
+                        %Vy
+                        Vy=(stop_point(2)-start_point(2))/run_time;
+                        %Vz
+                        Vz=(stop_point(3)-start_point(3))/run_time;
+                        %calculate step theta
+                        %store necceray data to base workspace
+                        assignin('base','Vx',Vx);
+                        assignin('base','Vy',Vy);
+                        assignin('base','Vz',Vz);
+                        assignin('base','start_theta',start_theta);
+                        %use simulink to get step theta
+                        sim_time_span=0:run_time;
+                        [tout,station,theta_step]=sim('cal_theta_step',sim_time_span);
+                    else
+                        %draw circle
+                        %speed (mm/s)
+                        R=getappdata(0,'R');
+                        if(strcmpi(varargin{3},'f'))
+                            V_circ=2*pi*R/run_time;
+                            %frequency (rad/s)
+                            f_circ=2*pi/run_time;
+                        else
+                            V_circ=pi*R/run_time;
+                            %frequency (rad/s)
+                            f_circ=pi/run_time;
+                        end
+                        %V_z
+                        Vz=(stop_point(3)-start_point(3))/run_time;
+                        %calculate step theta
+                        %store necceray data to base workspace
+                        assignin('base','V_circ',V_circ);
+                        assignin('base','f_circ',f_circ);
+                        assignin('base','Vz',Vz);
+                        assignin('base','start_theta',start_theta);
+                        %use simulink to get step theta
+                        sim_time_span=0:run_time;
+                        [tout,station,theta_step]=sim('cal_theta_step_circle',sim_time_span);
+                    end
                     theta_step=theta_step';
                     %draw robot
                     if(nargin==0)
                         draw_robo(theta_step(1,end),theta_step(2,end),theta_step(3,end),theta_step(4,end),theta_step(5,end),theta_step(6,end),theta_step,'y','y');
-                    else
-                        video=draw_robo(theta_step(1,end),theta_step(2,end),theta_step(3,end),theta_step(4,end),theta_step(5,end),theta_step(6,end),theta_step,'y','y','y',video);
+                    elseif(strcmpi(video_or_not,'n'))
+                        draw_robo(theta_step(1,end),theta_step(2,end),theta_step(3,end),theta_step(4,end),theta_step(5,end),theta_step(6,end),theta_step,'y','y',video_or_not,video);
+                    elseif(strcmpi(video_or_not,'y'))
+                        video=draw_robo(theta_step(1,end),theta_step(2,end),theta_step(3,end),theta_step(4,end),theta_step(5,end),theta_step(6,end),theta_step,'y','y',video_or_not,video);
                     end
                     %finish draw line
                     job_finish=1;
@@ -1012,7 +1041,8 @@ DL = uicontrol(DL_p,'String','Draw line','callback',@DL_button,...
         rmappdata(0,'trial_data');
         rmappdata(0,'temp_trial_data');
         rmappdata(0,'theta_data');
-        evalin('base','clear Vx;clear Vy;clear Vz;clear start_theta;');
+        rmappdata(0,'R');
+        evalin('base','clear Vx;clear Vy;clear Vz;clear start_theta V_circ f_circ;');
         delete(fig_1);
     end
 %Kinermacit
@@ -1140,6 +1170,8 @@ DL = uicontrol(DL_p,'String','Draw line','callback',@DL_button,...
             video_or_not='No';
             if(strcmp(video_or_not,'Yes'))
                 video=avifile('Demo_1_UM_Yaskawa3D.avi','fps',10);
+            else
+                video=[];
             end
             %clear previous trail
             clear_trail();
@@ -1156,12 +1188,23 @@ DL = uicontrol(DL_p,'String','Draw line','callback',@DL_button,...
             else
                 video=draw_figure(point,v,'y',video);
             end
-            v=3;
-            point=point_temp(2:end-1,:);
-            if(strcmp(video_or_not,'No') || strcmp(video_or_not,'Cancel') || isempty(video_or_not))
-                draw_figure(point,v,'n');
+            v=0.02*1000;
+            R=400;
+            setappdata(0,'R',R);
+            start_point=[1000 -1800 300];
+            stop_point=[1000 -1800 300];
+            run_time=2*pi*R/v/2;
+            set(x_start_edit_IK,'String',start_point(1));
+            set(y_start_edit_IK,'String',start_point(2));
+            set(z_start_edit_IK,'String',start_point(3));
+            set(x_final_edit_IK,'String',stop_point(1));
+            set(y_final_edit_IK,'String',stop_point(2));
+            set(z_final_edit_IK,'String',stop_point(3));
+            set(run_time_edit_IK,'String',run_time);
+            if(strcmpi(video_or_not,'No') || strcmp(video_or_not,'Cancel') || isempty(video_or_not))
+                draw_line('n',video,'h');
             else
-                video=draw_figure(point,v,'y',video);
+                [~,video]=draw_line('y',video);
             end
             v=10;
             point=[1000 -1000 300
@@ -1214,37 +1257,27 @@ DL = uicontrol(DL_p,'String','Draw line','callback',@DL_button,...
 %             video_or_not=questdlg({'Do you want to recorde a video for this demo?'},'Video?',...
 %                 'Yes','No','Cancel','Yes');
             video_or_not='No';
-            if(strcmp(video_or_not,'Yes'))
-                M=struct('cdata',[],'colormap',[]);
-            end
+            M=struct('cdata',[],'colormap',[]);
             %clear previous trail
             clear_trail();
             %draw circle
-            v=3;
-            y_temp=linspace(1200,800,10);
-            x_temp=sqrt(200^2-(y_temp-1000).^2)+1000;
-            z_temp=ones(1,length(y_temp)).*300;
-            point_temp=[x_temp' y_temp' z_temp'];
-            point=point_temp(1:end-1,:);
-            if(strcmp(video_or_not,'No') || strcmp(video_or_not,'Cancel') || isempty(video_or_not))
-                draw_figure(point,v,'n');
+            v=0.02*1000;
+            R=200;
+            setappdata(0,'R',R);
+            start_point=[1000 1000 300];
+            stop_point=[1000 1000 300];
+            run_time=2*pi*R/v;
+            set(x_start_edit_IK,'String',start_point(1));
+            set(y_start_edit_IK,'String',start_point(2));
+            set(z_start_edit_IK,'String',start_point(3));
+            set(x_final_edit_IK,'String',stop_point(1));
+            set(y_final_edit_IK,'String',stop_point(2));
+            set(z_final_edit_IK,'String',stop_point(3));
+            set(run_time_edit_IK,'String',run_time);
+            if(strcmpi(video_or_not,'No') || strcmp(video_or_not,'Cancel') || isempty(video_or_not))
+                draw_line('n',M,'f');
             else
-                M=draw_figure(point,v,'y',M);
-            end
-            v=3;
-            y_temp=linspace(800,1200,10);
-            x_temp=-sqrt(200^2-(y_temp-1000).^2)+1000;
-            z_temp=ones(1,length(y_temp)).*300;
-            point_temp=[x_temp' y_temp' z_temp'];
-            point=point_temp(2:end,:);
-            if(strcmp(video_or_not,'No') || strcmp(video_or_not,'Cancel') || isempty(video_or_not))
-                draw_figure(point,v,'n');
-            else
-                M=draw_figure(point,v,'y',M);
-                for i=1:length(M)-1
-                    M(i)=M(i)+1;
-                end
-                movie2avi(M,'demo_2_circle','fps',30);
+                [~,M]=draw_line('y',M);
             end
             %finish draw circle
             msgbox('Job has been finished.','Job Finish');
