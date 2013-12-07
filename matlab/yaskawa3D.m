@@ -1,10 +1,31 @@
+%  This is 3D demo for yaskawa robot arm. It includes kinermatics inverse
+%kinermatics. You also can control it to draw a line. If the start point
+%and the stop point is the same. It will only draw a point. There is a
+%checkbox for drawing trail. If it is selected, the trail of robot will be
+%drawed when you move the robot.
+%  There are two demos. First is to control robot to draw "UM". Second is to
+%control robot to draw a circle. They all need simulink. So when this
+%program is started, simulink will be started automatically. Please don't
+%do anything before the simulink starts. You also can create movie when you
+%want to run these two demos. But for the first demo, I don't suggest you
+%to do this. If you really want to do this, please make sure that your
+%computer has more than 2G free memory.
+%  This license of this program follows MIT license. If you want to use this
+%program, please follow it.
+%
+%  Thank you.
+%
+% pikipity
+% website: pikipity.github.io
+% email: pikipityw.gmail.com
+
 function yaskawa3D
 %
 %initial app
 loaddata;
 inithome;
 simulink;
-msgbox('Please do NOT do anthing until the simulink has opened.','Waiting');
+msgbox('Please do NOT do anthing until the simulink starts.','Waiting');
 %creat button
 demo_1 = uicontrol(fig_1,'String','Demo 1','callback',@demo_1_button,...
     'Position',[20 5 60 20]);
