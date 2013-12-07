@@ -16,5 +16,5 @@ Yaskawa 3D model (Matlab)
 下面是此演示的三段视频地址：
 
 1. [基本功能演示视频](http://v.youku.com/v_show/id_XNjM5NTA3ODgw.html?f=20972771)
-2. [Demo 1 演示视频](http://v.youku.com/v_show/id_XNjM5NTA4Mjk2.html?f=20972771)
-3. [Demo 2 演示视频](http://v.youku.com/v_show/id_XNjM5NTA4NDY0.html?f=20972771)
+2. [Demo 1 演示视频（画圆改进前）](http://v.youku.com/v_show/id_XNjM5NTA4Mjk2.html?f=20972771)
+3. [Demo 2 演示视频（画圆改进前）](http://v.youku.com/v_show/id_XNjM5NTA4NDY0.html?f=20972771)
