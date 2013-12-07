@@ -3,6 +3,8 @@ function yaskawa3D
 %initial app
 loaddata;
 inithome;
+simulink;
+msgbox('Please do NOT do anthing until the simulink has opened.','Waiting');
 %creat button
 demo_1 = uicontrol(fig_1,'String','Demo 1','callback',@demo_1_button,...
     'Position',[20 5 60 20]);
@@ -532,7 +534,13 @@ DL = uicontrol(DL_p,'String','Draw line','callback',@DL_button,...
                 %store start theta
                 start_theta=[t1;t2;t3;t4;t5;t6];
                 %draw start robo position
-                draw_robo(start_theta(1),start_theta(2),start_theta(3),start_theta(4),start_theta(5),start_theta(6),20,'n','y');
+                    if(nargin==0)
+                        draw_robo(start_theta(1),start_theta(2),start_theta(3),start_theta(4),start_theta(5),start_theta(6),20,'n','y');
+                    elseif(strcmpi(video_or_not,'n'))
+                        draw_robo(start_theta(1),start_theta(2),start_theta(3),start_theta(4),start_theta(5),start_theta(6),20,'n','y',video_or_not,video);
+                    elseif(strcmpi(video_or_not,'y'))
+                        video=draw_robo(start_theta(1),start_theta(2),start_theta(3),start_theta(4),start_theta(5),start_theta(6),20,'n','y',video_or_not,video);
+                    end
                 %check stop point
                 IK_point=[stop_point(1) stop_point(2) stop_point(3)];
                 set(x_edit_IK,'String',IK_point(1));
@@ -812,7 +820,12 @@ DL = uicontrol(DL_p,'String','Draw line','callback',@DL_button,...
          gohome();
     end
 %go home
-    function gohome()
+    function gohome(varargin)
+        if nargin==0
+            video_or_not='n';
+        else
+            video_or_not='y';
+        end
         %get original theta value
         theta=getappdata(0,'theta_data');
         %get new theta
@@ -823,7 +836,12 @@ DL = uicontrol(DL_p,'String','Draw line','callback',@DL_button,...
         theta.t5=t5_home/180*pi;
         theta.t6=t6_home/180*pi;
         %draw
-        draw_robo(theta.t1,theta.t2,theta.t3,theta.t4,theta.t5,theta.t6,20,draw_trail_value,'y');
+        if strcmpi(video_or_not,'y')
+            M=getappdata(0,'M');
+            draw_robo(theta.t1,theta.t2,theta.t3,theta.t4,theta.t5,theta.t6,20,draw_trail_value,'y',video_or_not,M);
+        else
+            draw_robo(theta.t1,theta.t2,theta.t3,theta.t4,theta.t5,theta.t6,20,draw_trail_value,'y');
+        end
     end
 
 %draw robot
@@ -950,8 +968,9 @@ DL = uicontrol(DL_p,'String','Draw line','callback',@DL_button,...
                 end
             end
             if(video=='y')
-                M(end+1)=getframe(fig_1);
-                varargout{1}=M;
+                M=getappdata(0,'M');
+                M(end+1)=getframe(gcf);
+                setappdata(0,'M',M);
             else
                  drawnow
             end
@@ -963,6 +982,9 @@ DL = uicontrol(DL_p,'String','Draw line','callback',@DL_button,...
         theta.t5=t5;
         theta.t6=t6;
         setappdata(0,'theta_data',theta);
+        if(video=='y')
+            varargout{1}=M;
+        end
     end
 
 %Init Home window
@@ -971,8 +993,8 @@ DL = uicontrol(DL_p,'String','Draw line','callback',@DL_button,...
         set(0,'Units','pixels')
         dim = get(0,'ScreenSize');
         fig_1 = figure('doublebuffer','on','Position',[0,35,dim(3)-200,dim(4)-110],...
-            'MenuBar','none','Name','3D Yaskama Robot Graphical Demo',...
-            'NumberTitle','off','CloseRequestFcn',@del_app,'nextplot','replace');
+            'MenuBar','none','Name','3D Yaskawa Robot Graphical Demo',...
+            'NumberTitle','off','CloseRequestFcn',@del_app);
         hold on;
         light                               % add a default light
         daspect([1 1 1])                    % Setting the aspect ratio
@@ -1036,13 +1058,16 @@ DL = uicontrol(DL_p,'String','Draw line','callback',@DL_button,...
 
 %% close function
     function del_app(varargin)
-        rmappdata(0,'patch_data');
-        rmappdata(0,'robo');
-        rmappdata(0,'trial_data');
-        rmappdata(0,'temp_trial_data');
-        rmappdata(0,'theta_data');
-        rmappdata(0,'R');
-        evalin('base','clear Vx;clear Vy;clear Vz;clear start_theta V_circ f_circ;');
+        try
+            rmappdata(0,'patch_data');
+            rmappdata(0,'robo');
+            rmappdata(0,'trial_data');
+            rmappdata(0,'temp_trial_data');
+            rmappdata(0,'theta_data');
+            rmappdata(0,'R');
+            rmappdata(0,'M');
+            evalin('base','clear Vx;clear Vy;clear Vz;clear start_theta V_circ f_circ;');
+        end
         delete(fig_1);
     end
 %Kinermacit
@@ -1165,14 +1190,12 @@ DL = uicontrol(DL_p,'String','Draw line','callback',@DL_button,...
         if run_or_not==0
             msgbox('This demo has been stopped.','Demo Cancel')
         else
-%             video_or_not=questdlg({'Do you want to recorde a video for this demo?'},'Video?',...
-%                 'Yes','No','Cancel','Yes');
-            video_or_not='No';
-            if(strcmp(video_or_not,'Yes'))
-                video=avifile('Demo_1_UM_Yaskawa3D.avi','fps',10);
-            else
-                video=[];
-            end
+            video_or_not=questdlg({'Do you want to recorde a video for this demo?'},'Video?',...
+                'Yes','No','Cancel','Yes');
+            %video_or_not='No';
+            %init M to store frame
+            M=struct('cdata',[],'colormap',[]);
+            setappdata(0,'M',M)
             %clear previous trail
             clear_trail();
             %draw "U"
@@ -1186,7 +1209,7 @@ DL = uicontrol(DL_p,'String','Draw line','callback',@DL_button,...
             if(strcmp(video_or_not,'No') || strcmp(video_or_not,'Cancel') || isempty(video_or_not))
                 draw_figure(point,v,'n');
             else
-                video=draw_figure(point,v,'y',video);
+                M=draw_figure(point,v,'y',M);
             end
             v=0.02*1000;
             R=400;
@@ -1202,9 +1225,9 @@ DL = uicontrol(DL_p,'String','Draw line','callback',@DL_button,...
             set(z_final_edit_IK,'String',stop_point(3));
             set(run_time_edit_IK,'String',run_time);
             if(strcmpi(video_or_not,'No') || strcmp(video_or_not,'Cancel') || isempty(video_or_not))
-                draw_line('n',video,'h');
+                draw_line('n',M,'h');
             else
-                [~,video]=draw_line('y',video);
+                [~,M]=draw_line('y',M,'h');
             end
             v=10;
             point=[1000 -1000 300
@@ -1212,7 +1235,7 @@ DL = uicontrol(DL_p,'String','Draw line','callback',@DL_button,...
             if(strcmp(video_or_not,'No') || strcmp(video_or_not,'Cancel') || isempty(video_or_not))
                 draw_figure(point,v,'n');
             else
-                video=draw_figure(point,v,'y',video);
+                M=draw_figure(point,v,'y',M);
             end
             %save "U"
             trial=getappdata(0,'trial_data');
@@ -1231,13 +1254,30 @@ DL = uicontrol(DL_p,'String','Draw line','callback',@DL_button,...
                         1400 0 300];
             if(strcmp(video_or_not,'No') || strcmp(video_or_not,'Cancel') || isempty(video_or_not))
                 draw_figure(point,v,'n');
+                gohome();
             else
-                video=draw_figure(point,v,'y',video);
-                video=close(video);
+                M=draw_figure(point,v,'y',M);
+                gohome('y');
+            end
+            %
+            M=getappdata(0,'M');
+            %output movie
+            if(strcmpi(video_or_not,'Yes'))
+                M=M(2:end);
+                waitbar_win=waitbar(0,'Begin to Convert figures to movie');
+                pause(3);
+                aviobj = avifile('Demo1.avi','compression','None');
+                for i=1:length(M)
+                    aviobj=addframe(aviobj,M(i));
+                    waitbar((i-1)/length(1:length(M)),waitbar_win,['Convert ' num2str((i-1)/length(1:length(M))*100) ' %']);
+                end
+                aviobj = close(aviobj);
+                waitbar(1,waitbar_win,['Convert 100 %']);
+                pause(0.1);
             end
             %finish draw "UM"
             msgbox('Job has been finished.','Job Finish');
-            gohome();
+            setappdata(0,'M',0);
         end
     end
 
@@ -1254,10 +1294,12 @@ DL = uicontrol(DL_p,'String','Draw line','callback',@DL_button,...
         if run_or_not==0
             msgbox('This demo has been stopped.','Demo Cancel')
         else
-%             video_or_not=questdlg({'Do you want to recorde a video for this demo?'},'Video?',...
-%                 'Yes','No','Cancel','Yes');
-            video_or_not='No';
+            video_or_not=questdlg({'Do you want to recorde a video for this demo?'},'Video?',...
+                'Yes','No','Cancel','Yes');
+            %video_or_not='No';
+            %init M to store frame
             M=struct('cdata',[],'colormap',[]);
+            setappdata(0,'M',M)
             %clear previous trail
             clear_trail();
             %draw circle
@@ -1276,12 +1318,28 @@ DL = uicontrol(DL_p,'String','Draw line','callback',@DL_button,...
             set(run_time_edit_IK,'String',run_time);
             if(strcmpi(video_or_not,'No') || strcmp(video_or_not,'Cancel') || isempty(video_or_not))
                 draw_line('n',M,'f');
+                gohome();
             else
-                [~,M]=draw_line('y',M);
+                [finish_or_not,M]=draw_line('y',M,'f');
+                gohome('y');
+            end
+            M=getappdata(0,'M');
+            %output movie
+            if(strcmpi(video_or_not,'Yes'))
+                M=M(2:end);
+                waitbar_win=waitbar(0,'Begin to Convert figures to movie');
+                pause(3);
+                aviobj = avifile('Demo2.avi','compression','None');
+                for i=1:length(M)
+                    aviobj=addframe(aviobj,M(i));
+                    waitbar((i-1)/length(1:length(M)),waitbar_win,['Convert ' num2str((i-1)/length(1:length(M))*100) ' %']);
+                end
+                aviobj = close(aviobj);
+                waitbar(1,waitbar_win,['Convert 100 %']);
             end
             %finish draw circle
             msgbox('Job has been finished.','Job Finish');
-            gohome();
+            setappdata(0,'M',0);
         end
     end
 
