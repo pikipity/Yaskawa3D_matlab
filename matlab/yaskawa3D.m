@@ -1287,12 +1287,14 @@ DL = uicontrol(DL_p,'String','Draw line','callback',@DL_button,...
                 M=M(2:end);
                 waitbar_win=waitbar(0,'Begin to Convert figures to movie');
                 pause(3);
-                aviobj = avifile('Demo1.avi','compression','None');
+                aviobj = VideoWriter('Demo1.avi');
+                aviobj.FrameRate=30;
+                open(aviobj);
                 for i=1:length(M)
-                    aviobj=addframe(aviobj,M(i));
+                    writeVideo(aviobj,M(i));
                     waitbar((i-1)/length(1:length(M)),waitbar_win,['Convert ' num2str((i-1)/length(1:length(M))*100) ' %']);
                 end
-                aviobj = close(aviobj);
+                close(aviobj);
                 waitbar(1,waitbar_win,['Convert 100 %']);
                 pause(0.1);
             end
@@ -1324,7 +1326,8 @@ DL = uicontrol(DL_p,'String','Draw line','callback',@DL_button,...
             %clear previous trail
             clear_trail();
             %draw circle
-            v=0.02*1000;
+            %0.02m/s  30 frames/s -> 0.02/30 m/frame
+            v=0.02/30*1000;
             R=200;
             setappdata(0,'R',R);
             start_point=[1000 1000 300];
@@ -1350,12 +1353,14 @@ DL = uicontrol(DL_p,'String','Draw line','callback',@DL_button,...
                 M=M(2:end);
                 waitbar_win=waitbar(0,'Begin to Convert figures to movie');
                 pause(3);
-                aviobj = avifile('Demo2.avi','compression','None');
+                aviobj = VideoWriter('Demo2.avi');
+                aviobj.FrameRate=30;
+                open(aviobj);
                 for i=1:length(M)
-                    aviobj=addframe(aviobj,M(i));
+                    writeVideo(aviobj,M(i));
                     waitbar((i-1)/length(1:length(M)),waitbar_win,['Convert ' num2str((i-1)/length(1:length(M))*100) ' %']);
                 end
-                aviobj = close(aviobj);
+                close(aviobj);
                 waitbar(1,waitbar_win,['Convert 100 %']);
             end
             %finish draw circle
