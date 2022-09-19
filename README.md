@@ -5,6 +5,8 @@ Yaskawa 3D model (Matlab)
 
 使用 Matlab 建立了一个 6 自由度的 3D Yaskawa 模型演示。主要参考了 Don Riley 的 3D PUMA 演示文件，具体介绍可以看[这里](http://pikipity.github.io/blog/3d-puma-demo.html)。
 
+在 MATLAB R2020b (Windows) 上测试，运行正常。
+
 使用 AutoCAD 建立的模型，文件在 ```model``` 文件夹中，用 ```stlread.m``` 函数将其导入 Matlab 中，然后用 Matlab 自带的 ```patch``` 函数进行绘制。
 
 此演示中包括了六轴的基本转动（kinematics）和根据目标位置进行六轴的控制（inverse kinematics）。Inverse kinematics 使用的是 simulink 进行计算，所以第一次运行的时候会比较慢，请耐心等待（Mac 可能需要打开 X11）。
