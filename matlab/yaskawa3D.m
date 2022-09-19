@@ -24,8 +24,8 @@ function yaskawa3D
 %initial app
 loaddata;
 fig_1 = inithome;
-simulink;
-msgbox('Please do NOT do anthing until the simulink starts.','Waiting');
+% simulink;
+% msgbox('Please do NOT do anthing until the simulink starts.','Waiting');
 %creat button
 demo_1 = uicontrol(fig_1,'String','Demo 1','callback',@demo_1_button,...
     'Position',[20 5 60 20]);
