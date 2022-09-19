@@ -23,7 +23,7 @@ function yaskawa3D
 %
 %initial app
 loaddata;
-inithome;
+fig_1 = inithome;
 simulink;
 msgbox('Please do NOT do anthing until the simulink starts.','Waiting');
 %creat button
@@ -1009,7 +1009,7 @@ DL = uicontrol(DL_p,'String','Draw line','callback',@DL_button,...
     end
 
 %Init Home window
-    function inithome
+    function fig_1 = inithome
         %init figure
         set(0,'Units','pixels')
         dim = get(0,'ScreenSize');
